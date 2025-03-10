@@ -1,6 +1,6 @@
-# dc-ts (Domain-Centric TypeScript)
+# dc-ts 
 
-**dc-ts** is a pragmatic, functional-oriented library designed to help developers build **event-driven domain layers** in TypeScript. It provides a structured yet flexible approach to implementing complex business logic, enforcing clear separation of concerns while maintaining code readability.
+**dc-ts** (for domain-centric TypeScript) is a pragmatic, functional-oriented library designed to help developers build **event-driven domain layers** in TypeScript. It provides a structured yet flexible approach to implementing complex business logic, enforcing clear separation of concerns while maintaining code readability.
 
 This guide introduces the key concepts and building blocks of **dc-ts** to help you quickly onboard and start building.
 
@@ -189,6 +189,35 @@ if (isFailure(cmdRes)) {
 
 The constructors automatically ensure that your data meets the expected structure and that required trace information is correctly set, improving consistency and reducing potential errors.
 
+A **Domain Trace** enables consistent tracking of message flow across your system. Each **Command** or **Event** carries trace information to link actions to their originating cause.
+
+### What is a Domain Trace?
+A **Domain Trace** contains:
+- **`correlationid`** — Links multiple related messages together, forming a chain of cause and effect.
+- **`causationid`** — Identifies the immediate message that triggered the current one.
+
+### Creating a Domain Trace
+The `dtFromMsg` utility creates a domain trace from an existing message:
+
+```ts
+import { dtFromMsg } from 'dc-ts'
+
+const dt: DomainTrace = dtFromMsg(createToDoCmd)
+// Result: { correlationid: 'same-as-cmd', causationid: 'cmd-id' }
+```
+
+### Adding a Domain Trace to a Message
+When constructing an **Event** from a **Command**, you should include the domain trace:
+
+```ts
+const evtRes = newToDoEvt<ToDoCreatedEvt>()
+    ('to-do-created')
+    ({ desc: 'Write dc-ts readme', status: 'created' })
+    (dt)
+```
+
+This ensures your system can track the full flow of messages and their origins, improving observability and debugging capabilities.
+
 ---
 
 ## **Core Workflows**
@@ -250,6 +279,5 @@ export const moveToDoneWf: MoveToDoneWf['fn'] =
 - And modular constraints,
 
 **dc-ts** encourages pragmatic, maintainable, and testable code.
-
 
 
