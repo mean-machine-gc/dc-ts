@@ -52,7 +52,7 @@ import { Result, succeed, fail } from 'dc-ts'
 
 type Divide = (num: number) => (den: number) => Result<number, 'cannot_divide_by_zero'>
 
-const divideBy: Divide = (num) => (den) => {
+const divide: Divide = (num) => (den) => {
     if (den === 0) {
         return fail('cannot_divide_by_zero')
     }
@@ -71,7 +71,7 @@ Example:
 ```ts
 import { isFailure } from 'dc-ts'
 
-const divideRes = divideBy(6)(2)
+const divideRes = divide(6)(2)
 if (isFailure(divideRes)) {
     return divideRes // { outcome: 'failure', cause: [{ msg: 'cannot_divide_by_zero' }] }
 }
@@ -133,7 +133,7 @@ export type MoveToDoneCmd = CMD<'move-to-done', MoveToDoneData>
 import { EVT } from 'dc-ts'
 
 type ToDoDoneData = { toDoId: string; status: 'done' }
-export type ToDoDoneEvt = EVT<'to-do-done', ToDoDoneData>
+export type ToDoDoneEvt = EVT<'todo-done', ToDoDoneData>
 ```
 
 Both types automatically include fields for:
@@ -145,7 +145,64 @@ Both types automatically include fields for:
 
 ---
 
+## **Using Message Constructors**
+
+In **dc-ts**, message constructors simplify the creation of **Commands** and **Events**, ensuring that data is correctly parsed and domain trace information is properly attached. 
+
+### Creating a Command Constructor
+You can create a constructor for commands using the `newCmd` utility. 
+
+```ts
+import { newCmd, safeParseTBox } from 'dc-ts'
+import { ToDoCmd } from './schema'
+
+export const newToDoCmd = <C extends ToDoCmd>() =>
+    newCmd<C['type'], C['data']>(safeParseTBox(ToDoCmd))
+```
+
+### Creating an Event Constructor
+Similarly, for events:
+
+```ts
+import { newEvt, safeParseTBox } from 'dc-ts'
+import { ToDoEvt } from './schema'
+
+export const newToDoEvt = <E extends ToDoEvt>() =>
+    newEvt<E['type'], E['data']>(safeParseTBox(ToDoEvt))
+```
+
+### Example Usage
+Using these constructors allows you to safely and consistently create messages with properly structured data:
+
+```ts
+const cmdRes = newToDoCmd<MoveToDoneCmd>()
+    ('move-to-done')
+    ({ toDoId: 'abc' })
+    ({ correlationid: 'xyz', causationid: '123' })
+
+if (isFailure(cmdRes)) {
+    console.error('Command creation failed:', cmdRes)
+} else {
+    console.log('Command created successfully:', cmdRes.data)
+}
+```
+
+The constructors automatically ensure that your data meets the expected structure and that required trace information is correctly set, improving consistency and reducing potential errors.
+
+---
+
 ## **Core Workflows**
+
+The `CoreWf` type will provide various utility types and signatures to support your workflow logic, such as:
+
+- **`cmd`** — the command type.
+- **`state`** — the state type required by the workflow.
+- **`evt`** — the event type produced by the workflow.
+- **`fn`** — the composed workflow function signature.
+- **`parseState`**, **`invariants`**, **`constrain`**, and **`transition`** — function types for individual steps.
+
+These types ensure that your workflow adheres to a consistent structure and helps enforce best practices when implementing each step.
+
 A **Core Workflow** defines the sequence in which a command is processed to produce an event.
 
 The typical steps in a workflow are:
@@ -193,4 +250,6 @@ export const moveToDoneWf: MoveToDoneWf['fn'] =
 - And modular constraints,
 
 **dc-ts** encourages pragmatic, maintainable, and testable code.
+
+
 

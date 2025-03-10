@@ -1,7 +1,8 @@
 {
   "name": "dc-ts",
-  "version": "1.0.0",
-  "description": "Utilities for domain-centric typescript :)",
+  "type": "module",
+  "version": "0.0.1-unstable",
+  "description": "Utilities for domain-centric typescript",
   "main": "index.ts",
   "devDependencies": {
     "@types/jest": "^29.5.14",
