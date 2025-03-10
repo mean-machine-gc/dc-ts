@@ -1,13 +1,13 @@
 # Node.js
-node_modules/
-logs/
-*.log
-npm-debug.log*
-pids/
-*.pid
-*.seed
-*.pid.lock
-.npm
-.eslintcache
-.node_repl_history
-.env*
+# node_modules/
+# logs/
+# *.log
+# npm-debug.log*
+# pids/
+# *.pid
+# *.seed
+# *.pid.lock
+# .npm
+# .eslintcache
+# .node_repl_history
+# .env*
