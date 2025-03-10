@@ -1,7 +1,7 @@
 {
   "name": "dc-ts",
   "type": "module",
-  "version": "0.0.3-unstable",
+  "version": "0.0.4-unstable",
   "description": "Utilities for domain-centric typescript",
   "main": "index.ts",
   "devDependencies": {
