@@ -339,12 +339,140 @@ This composed function can be imported and used by the Shell layer, ensuring it 
 
 ---
 
-## Reacting to Events with Policies
-
-Policies are used to react to events and trigger subsequent actions. They are implemented as pure functions that take an event and return a new command or event. For example:
-
+That's a fantastic idea! Let's build a more meaningful example for the **Policies** section, aligned with the **To-Do App** context.
 
 ---
+
+## Reacting to Events with Policies
+
+In **dc-ts**, **Policies** are designed to automatically react to events. They take an **event** and a **state**, and they return either a **command** or a **failure**. Policies are useful for implementing cross-entity logic, such as automatically updating related entities when conditions are met.
+
+### Example Scenario: Completing an Epic
+
+Imagine your **To-Do App** includes the concept of **Epics**, which are groups of related To-Dos. When a To-Do is marked as completed, we may want to check if **all the To-Dos in the corresponding Epic are completed**. If they are, the Policy should trigger a **CompleteEpicCmd** to mark the Epic itself as completed.
+
+---
+
+## Defining the Types
+
+### Event: `ToDoDoneEvt`
+This event signifies that a single To-Do has been marked as completed.
+
+```ts
+import { EVT } from 'dc-ts'
+
+type ToDoDoneData = { toDoId: string; epicId: string }
+export type ToDoDoneEvt = EVT<'to-do-done', ToDoDoneData>
+```
+
+### Command: `CompleteEpicCmd`
+This command will mark an Epic as completed.
+
+```ts
+import { CMD } from 'dc-ts'
+
+type CompleteEpicData = { epicId: string }
+export type CompleteEpicCmd = CMD<'complete-epic', CompleteEpicData>
+```
+
+### State: `EpicState`
+The state includes the list of To-Dos under the Epic and tracks their completion status.
+
+```ts
+export type EpicState = {
+    epicId: string
+    toDos: Array<{ id: string; status: 'completed' | 'in-progress' }>
+}
+```
+
+---
+
+## Implementing the Policy
+
+### Step 1: Parsing the State
+The Policy first needs to validate that the Epic state has the expected structure.
+
+```ts
+import { safeParseTBox } from 'dc-ts'
+import { EpicState } from './schema'
+
+const _parseState: EpicCompletePy['parse'] = safeParseTBox(EpicState)
+```
+
+---
+
+### Step 2: Invariants
+Invariants ensure that the provided event corresponds to a To-Do that belongs to the Epic.
+
+```ts
+import { fail, succeed } from 'dc-ts'
+
+const _invariants: EpicCompletePy['invariant'] = 
+    (evt) => (state) => {
+        const toDoInEpic = state.toDos.some(todo => todo.id === evt.data.toDoId)
+
+        if (!toDoInEpic) {
+            return fail('todo_not_in_epic')
+        }
+        return succeed(state)
+    }
+```
+
+---
+
+### Step 3: Constraints
+The constraint checks whether **all To-Dos in the Epic** are marked as completed.
+
+```ts
+const _allToDosCompleted: EpicCompletePy['constrain'] = 
+    (evt) => (state) => {
+        const allCompleted = state.toDos.every(todo => todo.status === 'completed')
+
+        if (!allCompleted) {
+            return fail('not_all_todos_completed')
+        }
+        return succeed(state)
+    }
+```
+
+---
+
+### Step 4: Execution
+If the conditions are satisfied, the Policy should generate the `CompleteEpicCmd`.
+
+```ts
+import { DomainTrace, dtFromMsg, newCmd } from 'dc-ts'
+
+const _execute: EpicCompletePy['execute'] = 
+    (evt) => (state) => {
+        const dt: DomainTrace = dtFromMsg(evt)
+
+        const cmdRes = newCmd<CompleteEpicCmd>()
+            ('complete-epic')
+            ({ epicId: state.epicId })
+            (dt)
+
+        return cmdRes
+    }
+```
+
+---
+
+### Step 5: Composing the Policy
+Now we combine all the building blocks using the `composePy` utility:
+
+```ts
+import { composePy } from 'dc-ts'
+
+export const completeEpicPy: EpicCompletePy['fn'] = 
+    composePy<EpicCompletePy>(_parseState)
+        (_invariants)
+        ([_allToDosCompleted])
+        (_execute)
+```
+
+---
+
 
 ## Conclusion
 
