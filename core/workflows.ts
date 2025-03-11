@@ -165,9 +165,9 @@ export const composeWf = <W extends _AnyCoreWf>
     (_trainsition: W['transition']) => 
     (cmd: W['cmd']) => 
     (currState: W['state']): W['res'] => {
-        const parsingRes = _parsing(currState);
-        const invariantsRes = acceptRes(_invariants(cmd))(parsingRes);
-        const constrainsRes = acceptRes(applyConstrains(_constrains)(cmd))(invariantsRes);
-        const transitionRes = acceptRes(_trainsition(cmd))(constrainsRes);
+        const parsingRes = _parsing(currState)
+        const invariantsRes = acceptRes(_invariants(cmd))(parsingRes) as Result<W['state'], W['fails']>
+        const constrainsRes = acceptRes(applyConstrains(_constrains)(cmd))(invariantsRes) as Result<W['state'], W['fails']>
+        const transitionRes = acceptRes(_trainsition(cmd))(constrainsRes) as W['res']
         return transitionRes;
     };
