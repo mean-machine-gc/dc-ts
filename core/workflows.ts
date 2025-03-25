@@ -16,13 +16,14 @@ import {
 /**
  * Type representing possible failure messages for Core Workflows.
  */
-export type CoreWfFails = SafeParseFails | HandlerFails | string;
+export type CoreWfFails = SafeParseFails | string;
 
 /**
  * Represents a core workflow function that processes a command and state to produce a result.
  * @template C The type of the command.
- * @template S The type of the state.
+ * @template iS The type of the input state.
  * @template E The type of the event produced.
+ * @template oS The type of the output state.
  * @template F The type of failure messages.
  */
 export type CoreWfFn<C, S, E, F extends string> = (c: C) => (s: S) => Result<E, F>;
@@ -38,89 +39,43 @@ export type PartialWf<S, E, F extends string> = (s: S) => Result<E, F>;
 /**
  * Represents a Core Workflow with structured properties and functions.
  * @template C The type of the command.
- * @template S The type of the state.
+ * @template iS The type of the input state.
  * @template E The type of the event produced.
+ * @template oS The type of the output state.
  * @template F The type of failure messages.
  */
-export type CoreWf<C, IS, E, OS, F extends string = CoreWfFails> = {
+export type CoreWf<C, iS, E, oS, F extends string = CoreWfFails> = {
     cmd: C;
-    inState: IS;
+    inState: iS;
     evt: E;
-    outState: OS;
+    outState: oS;
     fails: F;
-    res: Result<{evt:E, state: OS}, F>;
-    parseState: SafeParse<IS>
-    fn: CoreWfFn<C, IS, E, F>;
-    decide: (C) => (IS) => Result<E, F>
-    evolve: (E) => (IS) => Result<OS, F>
-    transition: CoreWfFn<C, IS, E, F>;
-    compose: CoreWfFn<C, IS, E, F>;
-    partialFn: PartialWf<IS, E, F>;
-    invariant: Invariant<C, IS, F>;
-    constrain: Constrain<C, IS, F>;
+    executeRes: Result<{evt:E[], state: oS}, F>
+    parseState: SafeParse<iS>
+    constrain: Constrain<C, iS, F>
+    execute: Execute<C, iS, E, oS, F>
+    decide: Decide<C, iS, E, F>
+    evolve: Evolve<E, iS, oS>
+    safeEvolve: SafeEvolve<E, iS, oS>
+    wf: {
+        execute: Execute<C, iS, E, oS, F>
+        decide: Decide<C, iS, E, F>
+        evolve: SafeEvolve<E, iS, oS>
+    }    
+    compose: 
+        (p: SafeParse<iS>) =>
+        (c: Constrain<C, iS, F>[]) => 
+        (d: Decide<C, iS, E, F>) => 
+        (e: Evolve<E, iS, oS>) => 
+            {
+                execute: Execute<C, iS, E, oS, F>,
+                decide: Decide<C, iS, E, F>,
+                evolve: SafeEvolve<E, iS, oS>,
+            }
 };
 
-type _AnyCoreWf = CoreWf<any, any, any, string>;
+type _AnyCoreWf = CoreWf<any, any, any, any, string>;
 
-/**
- * A reducer function that transforms the current state to a result.
- * @template State The type of the current state.
- * @template Evt The type of the event produced.
- * @template Fails The type of failure messages.
- */
-export type Reducer<State, Evt, Fails extends string> = 
-    (currentState: State) => Result<Evt, Fails>;
-
-/**
- * Represents possible failure messages for a command handler.
- */
-export type HandlerFails = SafeParseFails | 'not_implemented' | 'cmd_does_not_exist';
-
-/**
- * Defines a handler function that processes a command and returns a reducer function.
- * @template C The type of the command.
- * @template S The type of the state.
- * @template E The type of the event produced.
- * @template F The type of failure messages.
- */
-export type Handler<C, S, E, F extends string> = 
-    (cmd: C) => Reducer<S, E, F> | ((a: any) => Failure<HandlerFails>);
-
-/**
- * A handler that returns a failure indicating the command is not implemented.
- * @template W The workflow type.
- * @param {W['cmd']} c - The command.
- * @returns A failure result with "not_implemented".
- */
-export const notImplemented = <W extends _AnyCoreWf>(c: W['cmd']) => (s: W['state']) => {
-    return fail('not_implemented', c);
-};
-
-/**
- * Wraps a handler with command parsing to ensure only valid commands are processed.
- * @template C The type of the command.
- * @template S The type of the state.
- * @template E The type of the event produced.
- * @template F The type of failure messages.
- * @param {SafeParse<C>} parseCmd - Function to safely parse the command.
- * @param {Handler<C, S, E, F>} fn - The handler function.
- * @returns A function that applies the handler only if command parsing succeeds.
- */
-export const sanitizedHandler = <C, S, E, F extends string> 
-    (parseCmd: SafeParse<C>) => 
-    (fn: Handler<C, S, E, F>) => 
-    (cmd: C) => {
-        const cmdParseRes = parseCmd(cmd);
-        return acceptResPartial<Handler<C, S, E, F>, C, SafeParseFails, Reducer<S, E, F>>(fn)(cmdParseRes);
-    };
-
-/**
- * Represents an invariant function that ensures a command and state conform to certain rules.
- * @template C The type of the command.
- * @template S The type of the state.
- * @template F The type of failure messages.
- */
-export type Invariant<C, S, F extends string> = (cmd: C) => (state: S) => Result<S, F>;
 
 /**
  * Represents a constraint function that validates a command in a given state.
@@ -129,6 +84,10 @@ export type Invariant<C, S, F extends string> = (cmd: C) => (state: S) => Result
  * @template F The type of failure messages.
  */
 export type Constrain<C, S, F extends string = never> = (cmd: C) => (currState: S) => Result<S, F>;
+export type Decide<C, iS, E, F extends string> = (c: C) => (s: iS) => Result<E[], F>
+export type Evolve<E, iS, oS> = (e: E) => (s: iS) => oS
+export type SafeEvolve<E, iS, oS> = (e: E) => (s: iS) => Result<oS, SafeParseFails>
+export type Execute<C, iS, E, oS, F extends string> = (c: C) => (s: iS) => Result<{evt:E[], state: oS}, F>
 
 /**
  * Applies a set of constraint functions to a command and state, returning the first failure encountered.
@@ -163,15 +122,38 @@ const applyConstrains = <C, S, F extends string>(fns: Constrain<C, S, F>[]) => (
  * @returns A function that executes the workflow step by step.
  */
 export const composeWf = <W extends _AnyCoreWf>
-    (_parsing: SafeParse<W['state']>) => 
-    (_invariants: W['invariant']) => 
+    (_parseState: SafeParse<W['inState']>) => 
     (_constrains: W['constrain'][]) =>
-    (_trainsition: W['transition']) => 
-    (cmd: W['cmd']) => 
-    (currState: W['state']): W['res'] => {
-        const parsingRes = _parsing(currState)
-        const invariantsRes = acceptRes(_invariants(cmd))(parsingRes) as Result<W['state'], W['fails']>
-        const constrainsRes = acceptRes(applyConstrains(_constrains)(cmd))(invariantsRes) as Result<W['state'], W['fails']>
-        const transitionRes = acceptRes(_trainsition(cmd))(constrainsRes) as W['res']
-        return transitionRes;
+    (_decide: W['decide']) => 
+    (_evolve: W['evolve']): W['wf'] => {
+        const execute: W['execute'] = (c: W['cmd']) => (s: W['inState']) => {
+            const parsingRes = _parseState(s)
+            const constrainsRes = acceptRes(applyConstrains(_constrains)(c))(parsingRes) as Result<W['inState'], W['fails']>
+            const decideRes = acceptRes(_decide(c))(constrainsRes) as Result<W['evt'][], W['fails']>
+            if(isFailure(decideRes)){
+                return failWithRes<W['fails']>(decideRes as Failure<W['fails']>)
+            }
+            const evt = decideRes['data'] as W['evt'][]
+            const state = evt.reduce(_evolve, s) as W['outState']
+            return succeed({evt, state})
+        }
+
+        const decide: W['decide'] = (c: W['cmd']) => (s: W['inState']) => {
+            const parsingRes = _parseState(s)
+            const constrainsRes = acceptRes(applyConstrains(_constrains)(c))(parsingRes) as Result<W['inState'], W['fails']>
+            const decideRes = acceptRes(_decide(c))(constrainsRes) as Result<W['evt'][], W['fails']>
+            return decideRes
+        }
+
+        const evolve: W['safeEvolve'] = (e: W['evt']) => (s: W['inState']) => {
+            const parsingRes = _parseState(s)
+            const stateRes = acceptRes(_evolve(e))(parsingRes) as Result<W['outState'], SafeParseFails>
+            return stateRes
+        }
+
+        return {
+            execute,
+            decide,
+            evolve
+        }
     };
