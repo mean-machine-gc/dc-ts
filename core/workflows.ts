@@ -42,18 +42,22 @@ export type PartialWf<S, E, F extends string> = (s: S) => Result<E, F>;
  * @template E The type of the event produced.
  * @template F The type of failure messages.
  */
-export type CoreWf<C, S, E, F extends string = CoreWfFails> = {
+export type CoreWf<C, IS, E, OS, F extends string = CoreWfFails> = {
     cmd: C;
-    state: S;
+    inState: IS;
     evt: E;
+    outState: OS;
     fails: F;
-    res: Result<E, F>;
-    fn: CoreWfFn<C, S, E, F>;
-    transition: CoreWfFn<C, S, E, F>;
-    compose: CoreWfFn<C, S, E, F>;
-    partialFn: PartialWf<S, E, F>;
-    invariant: Invariant<C, S, F>;
-    constrain: Constrain<C, S, F>;
+    res: Result<{evt:E, state: OS}, F>;
+    parseState: SafeParse<IS>
+    fn: CoreWfFn<C, IS, E, F>;
+    decide: (C) => (IS) => Result<E, F>
+    evolve: (E) => (IS) => Result<OS, F>
+    transition: CoreWfFn<C, IS, E, F>;
+    compose: CoreWfFn<C, IS, E, F>;
+    partialFn: PartialWf<IS, E, F>;
+    invariant: Invariant<C, IS, F>;
+    constrain: Constrain<C, IS, F>;
 };
 
 type _AnyCoreWf = CoreWf<any, any, any, string>;
