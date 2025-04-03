@@ -12,6 +12,6 @@ export const safeParseTBox: SafeParseTBox =
             Value.Assert(schema, data)
             return succeed(data)
         }catch(e){
-            return fail('invalid_payload', e)
+            return fail('parse_error', e)
         }
     }

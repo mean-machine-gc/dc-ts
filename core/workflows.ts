@@ -19,24 +19,6 @@ import {
 export type CoreWfFails = SafeParseFails | string;
 
 /**
- * Represents a core workflow function that processes a command and state to produce a result.
- * @template C The type of the command.
- * @template iS The type of the input state.
- * @template E The type of the event produced.
- * @template oS The type of the output state.
- * @template F The type of failure messages.
- */
-export type CoreWfFn<C, S, E, F extends string> = (c: C) => (s: S) => Result<E, F>;
-
-/**
- * A partial workflow function that only depends on the state to produce a result.
- * @template S The type of the state.
- * @template E The type of the event produced.
- * @template F The type of failure messages.
- */
-export type PartialWf<S, E, F extends string> = (s: S) => Result<E, F>;
-
-/**
  * Represents a Core Workflow with structured properties and functions.
  * @template C The type of the command.
  * @template iS The type of the input state.
@@ -74,19 +56,54 @@ export type CoreWf<C, iS, E, oS, F extends string = CoreWfFails> = {
             }
 };
 
+/**
+ * A dummy Core Workflow to make it easier to build the associated types and functions
+ */
 type _AnyCoreWf = CoreWf<any, any, any, any, string>;
 
 
 /**
- * Represents a constraint function that validates a command in a given state.
+ * Represents a constraint function that validates a command in a given state. Return the success of the state if all goes well.
  * @template C The type of the command.
  * @template S The type of the state.
  * @template F The type of failure messages.
  */
 export type Constrain<C, S, F extends string = never> = (cmd: C) => (currState: S) => Result<S, F>;
+
+/**
+ * Represents the decision of which events should be created (what happened in the system)
+ * @template C The type of the command.
+ * @template iS The type of the initial state.
+ * @template E A union type of the events that can be generated.
+ * @template F The type of failure messages.
+ */
 export type Decide<C, iS, E, F extends string> = (c: C) => (s: iS) => Result<E[], F>
+
+/**
+ * Represents the evolution of the aggregate state following domain events.
+ * @template E The type of the event.
+ * @template iS The type of the initial state.
+ * @template oS The type of the output state.
+ * @template F The type of failure messages.
+ */
 export type Evolve<E, iS, oS> = (e: E) => (s: iS) => oS
+
+/**
+ * Represents the evolution of the aggregate state following domain events, but it also checks the validity of the input state, hence it can return a SafeParseFails failure.
+ * @template E The type of the event.
+ * @template iS The type of the initial state.
+ * @template oS The type of the output state.
+ * @template F The type of failure messages.
+ */
 export type SafeEvolve<E, iS, oS> = (e: E) => (s: iS) => Result<oS, SafeParseFails>
+
+/**
+ * This function type chains a workflow decide and evolve function, it is a shorthand to receive both the events and the new state in a single invocation.
+ * @template E The type of the event.
+ * @template iS The type of the initial state.
+ * @template oS The type of the output state.
+ * @template F The type of failure messages.
+ */
 export type Execute<C, iS, E, oS, F extends string> = (c: C) => (s: iS) => Result<{evt:E[], state: oS}, F>
 
 /**
@@ -126,6 +143,7 @@ export const composeWf = <W extends _AnyCoreWf>
     (_constrains: W['constrain'][]) =>
     (_decide: W['decide']) => 
     (_evolve: W['evolve']): W['wf'] => {
+        
         const execute: W['execute'] = (c: W['cmd']) => (s: W['inState']) => {
             const parsingRes = _parseState(s)
             const constrainsRes = acceptRes(applyConstrains(_constrains)(c))(parsingRes) as Result<W['inState'], W['fails']>
