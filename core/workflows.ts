@@ -26,34 +26,34 @@ export type CoreWfFails = SafeParseFails | string;
  * @template oS The type of the output state.
  * @template F The type of failure messages.
  */
-export type CoreWf<C, A, E, F extends string = CoreWfFails> = {
+export type CoreWf<C, iA, oA, E, F extends string = CoreWfFails> = {
     cmd: C
-    aggregate: A
+    inputAg: iA
+    outputAg: oA
+    aggregate: iA | oA
     evt: E
     fails: F
-    validateInputState: SafeParse<A>
-    validateOutputState: SafeParse<A>
-    constrain: Constrain<C, A, F>
-    decide: Decide<C, A, E, F>
+    validateAggregate: SafeParse<iA | oA>
+    constrain: Constrain<C, iA | oA, F>
+    decide: Decide<C, iA | oA, E, F>
     wf: {
-        decide: Decide<C, A, E, F>
-        validateOutputState: SafeParse<A>
+        decide: Decide<C, iA | oA, E, F>
+        validateOutputState: SafeParse<iA | oA>
     }    
     compose: 
-        (pIn: SafeParse<A>) =>
-        (c: Constrain<C, A, F>[]) => 
-        (d: Decide<C, A, E, F>) => 
-        (pOut: SafeParse<A>) => 
+        (p: SafeParse<iA | oA>) =>
+        (c: Constrain<C, iA | oA, F>[]) => 
+        (d: Decide<C, iA | oA, E, F>) => 
             {
-                decide: Decide<C, A, E, F>,
-                validateOutputState: SafeParse<A>
+                decide: Decide<C, iA | oA, E, F>,
+                validateOutputState: SafeParse<iA | oA>
             }
 };
 
 /**
  * A dummy Core Workflow to make it easier to build the associated types and functions
  */
-type _AnyCoreWf = CoreWf<any, any, any, string>;
+type _AnyCoreWf = CoreWf<any, any, any, any, string>;
 
 
 /**
