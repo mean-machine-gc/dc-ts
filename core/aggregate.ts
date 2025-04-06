@@ -17,7 +17,7 @@ const _newAgg = <T extends string, D>(p: SafeParse<AGG<T, D>>) => (_tag: T) => (
     return parseRes
 }
 
-export const newAgg = <A extends _anyAggregate>() => {
-    return _newAgg<A['_tag'], A['data']>
+export const newAgg = <A extends _anyAggregate>(p: SafeParse<A>) => {
+    return _newAgg<A['_tag'], A['data']>(p)
 }
 
