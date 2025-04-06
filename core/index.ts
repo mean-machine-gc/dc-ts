@@ -4,4 +4,6 @@ export * from './result'
 export * from './workflows'
 export * from './module'
 export * from './policies'
+export * from './aggregate'
+
 
