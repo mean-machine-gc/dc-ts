@@ -26,7 +26,8 @@ export type CoreWfFails = SafeParseFails | string;
  * @template oS The type of the output state.
  * @template F The type of failure messages.
  */
-export type CoreWf<C, iA, E, oA, F extends string = CoreWfFails> = {
+export type CoreWf<N extends string, C, iA, E, oA, F extends string = CoreWfFails> = {
+    name: N
     cmd: C
     inputAg: iA
     outputAg: oA
