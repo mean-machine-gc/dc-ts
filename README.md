@@ -1,6 +1,5 @@
 
 
-```markdown
 # ✅ dc-ts
 
 > Domain-Centric TypeScript — a functional, event-driven approach to core domain logic in TypeScript.
@@ -173,6 +172,4 @@ Use the `dcts` CLI to generate:
 ## 📝 License
 
 MIT — Giovanni & Contributors
-```
 
----
